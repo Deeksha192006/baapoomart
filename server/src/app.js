@@ -4,6 +4,9 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 
 import mongoSanitize from 'express-mongo-sanitize';
 
@@ -15,12 +18,17 @@ import { env } from './config/env.js';
 
 import { observabilityMiddleware } from './middleware/observabilityMiddleware.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const clientDistPath = path.resolve(__dirname, '../../../client/dist');
+const altClientDistPath = path.resolve(__dirname, '../../client/dist');
+
 const app = express();
 
 app.use(observabilityMiddleware);
 
 // Security Headers
-app.use(helmet());
+app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 
 // CORS configuration supporting single or comma-delimited custom domains
 const allowedClientUrls = (env.CLIENT_URL || '')
@@ -76,7 +84,24 @@ app.use('/api', limiter);
 // Base API Routes
 app.use('/api', routes);
 
-// 404 Handler
+// Serve Static Frontend Assets in Production
+const activeDistPath = fs.existsSync(clientDistPath)
+  ? clientDistPath
+  : fs.existsSync(altClientDistPath)
+  ? altClientDistPath
+  : null;
+
+if (activeDistPath) {
+  app.use(express.static(activeDistPath));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) {
+      return next();
+    }
+    res.sendFile(path.join(activeDistPath, 'index.html'));
+  });
+}
+
+// 404 Handler for API
 app.use((req, res, next) => {
   next(new ApiError(404, `Route ${req.originalUrl} not found`, ERROR_CODES.NOT_FOUND));
 });

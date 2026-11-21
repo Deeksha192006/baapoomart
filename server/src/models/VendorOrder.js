@@ -61,6 +61,7 @@ const vendorOrderSchema = new mongoose.Schema(
         'PICKUP_REQUESTED',
         'PICKUP_SCHEDULED',
         'PICKED_UP',
+        'SHIPPED',
         'IN_TRANSIT',
         'OUT_FOR_DELIVERY',
         'DELIVERED',

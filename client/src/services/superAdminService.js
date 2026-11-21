@@ -373,6 +373,24 @@ export const superAdminService = {
     const res = await api.delete(`/super-admin/categories/${id}`);
     return res.data?.data;
   },
+
+  // Fair Coins Management
+  getFairCoinsOverview: async () => {
+    const res = await api.get('/super-admin/fair-coins/overview');
+    return res.data?.data;
+  },
+  getFairCoinsCustomers: async (params = {}) => {
+    const res = await api.get('/super-admin/fair-coins/customers', { params });
+    return res.data?.data;
+  },
+  getFairCoinsTransactions: async (params = {}) => {
+    const res = await api.get('/super-admin/fair-coins/transactions', { params });
+    return res.data?.data;
+  },
+  getFairCoinsOrders: async (params = {}) => {
+    const res = await api.get('/super-admin/fair-coins/orders', { params });
+    return res.data?.data;
+  },
 };
 
 

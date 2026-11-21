@@ -262,6 +262,21 @@ import { dataDeletionController } from '../controllers/dataDeletionController.js
 router.get('/data-deletion-requests', dataDeletionController.getAdminRequests);
 router.post('/data-deletion-requests/:requestId/process', dataDeletionController.processAdminRequest);
 
+// =========================================================================
+// 20. Fair Coins Management (Super Admin Exclusive)
+// =========================================================================
+import {
+  getSuperAdminFairCoinsOverview,
+  getSuperAdminFairCoinsCustomers,
+  getSuperAdminFairCoinsTransactions,
+  getSuperAdminFairCoinsOrders,
+} from '../controllers/superAdminFairCoinController.js';
+
+router.get('/fair-coins/overview', getSuperAdminFairCoinsOverview);
+router.get('/fair-coins/customers', getSuperAdminFairCoinsCustomers);
+router.get('/fair-coins/transactions', getSuperAdminFairCoinsTransactions);
+router.get('/fair-coins/orders', getSuperAdminFairCoinsOrders);
+
 export default router;
 
 

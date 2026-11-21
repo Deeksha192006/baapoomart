@@ -25,22 +25,53 @@ export const getVendorStatement = asyncWrapper(async (req, res) => {
     createdAt: { $gte: startDate, $lte: endDate }
   }).sort({ createdAt: 1 });
 
+  // Settlements within period
+  const settlements = await VendorSettlement.find({
+    vendorId: vendor._id,
+    createdAt: { $gte: startDate, $lte: endDate }
+  }).populate('suborderId', 'subOrderNumber itemsSubtotal grandTotal').sort({ createdAt: -1 }).lean();
+
   let sales = 0;
   let commission = 0;
   let deductions = 0;
   let payouts = 0;
 
-  transactions.forEach(t => {
-    if (t.transactionType === 'SALE') sales += t.credit;
-    else if (t.transactionType === 'PLATFORM_COMMISSION' || t.transactionType === 'NETWORK_COMMISSION') commission += t.debit;
-    else if (t.transactionType === 'PAYOUT') payouts += t.debit;
-    else if (t.transactionType === 'ADJUSTMENT') {
-      if (t.debit > 0) deductions += t.debit;
-      if (t.credit > 0) sales += t.credit;
+  settlements.forEach((s) => {
+    sales += (s.grossAmount || 0);
+    commission += (s.platformCommission || 0);
+    if (s.status === 'PAID') {
+      payouts += (s.netPayable || 0);
     }
   });
 
-  const closingBalance = transactions.length > 0 ? transactions[transactions.length - 1].balanceSnapshot : openingBalance;
+  // Fallback to ledger if settlements are empty
+  if (sales === 0) {
+    transactions.forEach(t => {
+      if (t.transactionType === 'SALE') {
+        sales += t.credit;
+      } else if (t.transactionType === 'SALE_EARNED') {
+        const grossEst = Math.round((t.credit / 0.95) * 100) / 100;
+        sales += grossEst;
+        commission += Math.round((grossEst - t.credit) * 100) / 100;
+        payouts += t.credit;
+      } else if (t.transactionType === 'PLATFORM_COMMISSION' || t.transactionType === 'NETWORK_COMMISSION') {
+        commission += t.debit;
+      } else if (t.transactionType === 'PAYOUT') {
+        payouts += t.debit;
+      } else if (t.transactionType === 'ADJUSTMENT') {
+        if (t.debit > 0) deductions += t.debit;
+        if (t.credit > 0) sales += t.credit;
+      }
+    });
+  }
+
+  // Fallback to vendor profile totalSales if still 0
+  if (sales === 0 && vendor.totalSales > 0) {
+    sales = vendor.totalSales;
+    commission = Math.round(vendor.totalSales * 0.05 * 100) / 100;
+  }
+
+  const closingBalance = vendor.balance !== undefined ? vendor.balance : (transactions.length > 0 ? transactions[transactions.length - 1].balanceSnapshot : openingBalance);
   
   const statement = {
     period: { start: startDate, end: endDate },
@@ -50,7 +81,8 @@ export const getVendorStatement = asyncWrapper(async (req, res) => {
     deductions,
     payouts,
     closingBalance,
-    transactions
+    transactions,
+    settlements,
   };
 
   return res.status(200).json(new ApiResponse(200, statement, 'Vendor statement retrieved'));

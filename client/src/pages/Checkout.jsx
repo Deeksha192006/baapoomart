@@ -72,6 +72,34 @@ export const Checkout = () => {
   const [showMockModal, setShowMockModal] = useState(false);
   const [mockPaymentData, setMockPaymentData] = useState(null);
 
+  const [shippingFee, setShippingFee] = useState(45);
+  const [shippingCarrierName, setShippingCarrierName] = useState('Delhivery Surface');
+  const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
+
+  const fetchShippingRate = async (pincode) => {
+    if (!pincode || String(pincode).trim().length !== 6) return;
+    setIsCalculatingShipping(true);
+    try {
+      const res = await api.get('/shipping/serviceability', {
+        params: {
+          pickupPincode: '628502',
+          deliveryPincode: String(pincode).trim(),
+          weight: 0.5,
+        },
+      });
+      const data = res.data?.data;
+      if (data?.availableCouriers?.[0]) {
+        const courier = data.availableCouriers[0];
+        setShippingFee(Number(courier.rate) || 45);
+        setShippingCarrierName(courier.name || 'Delhivery Surface');
+      }
+    } catch (e) {
+      setShippingFee(45);
+    } finally {
+      setIsCalculatingShipping(false);
+    }
+  };
+
   useEffect(() => {
     fetchCartAndAddresses();
   }, []);
@@ -112,6 +140,7 @@ export const Checkout = () => {
           state: def.state,
           zip: def.postalCode,
         });
+        fetchShippingRate(def.postalCode);
       } else {
         setUseNewAddress(true);
       }
@@ -143,18 +172,22 @@ export const Checkout = () => {
       return;
     }
 
-    if (entered > maxCoinsPerPurchase) {
+    const currentBalance = Number(availableCoins || user?.fairCoinBalance || 0);
+    if (entered > currentBalance) {
       setCoinAlert(
-        `You can use only ${maxCoinsPerPurchase} Fair Coins per purchase. Please reduce the amount and try again.`
+        `You cannot redeem more than your available balance of ${currentBalance.toLocaleString()} Fair Coins.`
       );
       return;
     }
 
-    const currentBalance = availableCoins || user?.fairCoinBalance || 0;
-    if (entered > currentBalance) {
-      setCoinAlert(
-        `You cannot redeem more than your available balance of ${currentBalance} Fair Coins.`
-      );
+    // Ensure redemption discount cannot exceed net order payable amount
+    const netOrderValue = Math.max(0, calculateSubtotal() - (cart?.discountAmount || 0));
+    const potentialDiscount = Math.floor(entered / 10);
+    if (potentialDiscount > netOrderValue) {
+      const maxAllowedCoins = netOrderValue * 10;
+      setCoinsToUse(maxAllowedCoins);
+      setCoinsInput(String(maxAllowedCoins));
+      setCoinAlert(`Coins capped to ${maxAllowedCoins.toLocaleString()} (₹${netOrderValue}) to match maximum payable amount.`);
       return;
     }
 
@@ -178,10 +211,15 @@ export const Checkout = () => {
       state: addr.state,
       zip: addr.postalCode,
     });
+    fetchShippingRate(addr.postalCode);
   };
 
   const handleChange = (e) => {
-    setAddress({ ...address, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setAddress({ ...address, [name]: value });
+    if (name === 'zip' && value.trim().length === 6) {
+      fetchShippingRate(value.trim());
+    }
   };
 
   const loadRazorpayScript = () => {
@@ -227,9 +265,10 @@ export const Checkout = () => {
     e.preventDefault();
     setErrorMessage('');
 
-    if (coinsToUse > maxCoinsPerPurchase) {
+    const currentBalance = Number(availableCoins || user?.fairCoinBalance || 0);
+    if (coinsToUse > currentBalance) {
       setErrorMessage(
-        `You can use only ${maxCoinsPerPurchase} Fair Coins per purchase. Please reduce the amount and try again.`
+        `You cannot redeem more than your available balance of ${currentBalance.toLocaleString()} Fair Coins.`
       );
       return;
     }
@@ -291,7 +330,7 @@ export const Checkout = () => {
         key: paymentData.keyId,
         amount: paymentData.amount,
         currency: paymentData.currency,
-        name: 'FairKart Marketplace',
+        name: 'BAAPOO MART',
         description: `Payment for Order #${order.orderNumber}`,
         order_id: paymentData.razorpayOrderId,
         handler: async function (response) {
@@ -340,7 +379,7 @@ export const Checkout = () => {
   const subtotal = calculateSubtotal();
   const couponDiscount = cart?.discountAmount || 0;
   const coinDiscount = Math.floor(coinsToUse / (coinsPerRupee || 10));
-  const grandTotal = Math.max(0, subtotal - couponDiscount - coinDiscount);
+  const grandTotal = Math.max(0, subtotal + shippingFee - couponDiscount - coinDiscount);
 
   if (cartLoading) {
     return (
@@ -600,68 +639,106 @@ export const Checkout = () => {
           </div>
 
           {/* Fair Coins Redemption Section */}
-          <div className="bg-amber-50/70 border border-amber-200 p-4 rounded-2xl space-y-2.5">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-amber-900 flex items-center gap-1.5">
-                <Coins className="w-4 h-4 text-amber-600" />
-                Fair Coins Redemption
-              </span>
-              <span className="text-[11px] text-amber-800 font-bold">
-                Balance: {Number(availableCoins || user?.fairCoinBalance || 0).toLocaleString()} Coins
-              </span>
-            </div>
+          {(() => {
+            const avail = Number(availableCoins || user?.fairCoinBalance || 0);
+            const availRupees = (avail / 10).toFixed(2);
+            const remaining = Math.max(0, avail - coinsToUse);
 
-            <p className="text-xs text-amber-900 font-medium">
-              You can use up to {maxCoinsPerPurchase} Fair Coins per purchase.
-            </p>
+            return (
+              <div className="bg-amber-50/80 border border-amber-200/90 p-4 sm:p-5 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-amber-950 flex items-center gap-1.5">
+                    <Coins className="w-4 h-4 text-amber-600" />
+                    <span>Fair Coins Redemption</span>
+                  </span>
+                  <span className="text-[11px] text-amber-900 font-black bg-amber-100/80 px-2 py-0.5 rounded-md border border-amber-200">
+                    10 Coins = ₹1
+                  </span>
+                </div>
 
-            {coinAlert && (
-              <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-[#ED1C2E] text-xs font-bold flex items-start gap-1.5 shadow-xs">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-[#ED1C2E]" />
-                <span>{coinAlert}</span>
+                {/* Available Balance & Rupee Value */}
+                <div className="flex items-center justify-between text-xs text-slate-700 bg-white/70 p-2.5 rounded-xl border border-amber-100">
+                  <span className="font-medium text-slate-600">Available Balance:</span>
+                  <div className="text-right">
+                    <span className="font-black text-amber-900">{avail.toLocaleString()} Coins</span>
+                    <span className="text-slate-500 font-semibold ml-1.5">(₹{availRupees})</span>
+                  </div>
+                </div>
+
+                {coinAlert && (
+                  <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-[#ED1C2E] text-xs font-bold flex items-start gap-1.5 shadow-xs">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-[#ED1C2E]" />
+                    <span>{coinAlert}</span>
+                  </div>
+                )}
+
+                {/* Input Field & Actions */}
+                <div className="flex items-center gap-2 pt-0.5">
+                  <input
+                    type="number"
+                    min="0"
+                    max={avail}
+                    step="1"
+                    placeholder="Coins to redeem (e.g. 300)"
+                    value={coinsInput}
+                    onChange={(e) => {
+                      setCoinsInput(e.target.value);
+                      setCoinAlert('');
+                    }}
+                    className="w-full bg-white text-xs text-slate-900 rounded-xl px-3 py-2.5 border border-amber-300 focus:outline-none focus:border-amber-500 font-bold"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyCoins}
+                    className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shrink-0 transition-colors shadow-xs"
+                  >
+                    Apply
+                  </button>
+                  {avail > 0 && coinsToUse === 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const netOrder = Math.max(0, calculateSubtotal() - (cart?.discountAmount || 0));
+                        const maxCoins = Math.min(avail, netOrder * 10);
+                        setCoinsInput(String(maxCoins));
+                        setCoinsToUse(maxCoins);
+                      }}
+                      className="px-2.5 py-2.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs shrink-0 transition-colors"
+                    >
+                      Max
+                    </button>
+                  )}
+                  {coinsToUse > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveCoins}
+                      className="px-2.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs shrink-0 transition-colors"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+
+                {/* Applied Summary & Remaining Balance */}
+                {coinsToUse > 0 && (
+                  <div className="bg-emerald-50/70 border border-emerald-200 p-2.5 rounded-xl space-y-1 text-xs">
+                    <div className="flex items-center justify-between text-emerald-900 font-bold">
+                      <span>Redeemed:</span>
+                      <span>{coinsToUse.toLocaleString()} Coins</span>
+                    </div>
+                    <div className="flex items-center justify-between text-emerald-800 font-bold">
+                      <span>Discount in Rupees:</span>
+                      <span className="text-emerald-700 font-black">₹{coinDiscount}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-600 pt-1 border-t border-emerald-100 text-[11px] font-medium">
+                      <span>Remaining Balance:</span>
+                      <span className="font-bold text-slate-800">{remaining.toLocaleString()} Coins</span>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-
-            <div className="flex items-center gap-2 pt-0.5">
-              <input
-                type="number"
-                min="0"
-                step="1"
-                placeholder="Enter Fair Coins"
-                value={coinsInput}
-                onChange={(e) => {
-                  setCoinsInput(e.target.value);
-                  setCoinAlert('');
-                }}
-                className="w-full bg-white text-xs text-slate-900 rounded-xl px-3 py-2 border border-amber-300 focus:outline-none focus:border-amber-500 font-bold"
-              />
-              <button
-                type="button"
-                onClick={handleApplyCoins}
-                className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shrink-0 transition-colors shadow-xs"
-              >
-                Apply
-              </button>
-              {coinsToUse > 0 && (
-                <button
-                  type="button"
-                  onClick={handleRemoveCoins}
-                  className="px-2.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs shrink-0 transition-colors"
-                >
-                  Remove
-                </button>
-              )}
-            </div>
-
-            <div className="flex items-center justify-between text-[10px] text-amber-700 font-bold pt-0.5">
-              <span>{coinsPerRupee} Fair Coins = ₹1</span>
-              {coinsToUse > 0 && (
-                <span className="text-emerald-700">
-                  Applied: {coinsToUse} coins (-₹{coinDiscount.toFixed(2)})
-                </span>
-              )}
-            </div>
-          </div>
+            );
+          })()}
 
           {/* Pricing Breakdown */}
           <div className="space-y-3 text-sm text-slate-600 border-t border-slate-100 pt-4">
@@ -684,9 +761,14 @@ export const Checkout = () => {
               </div>
             )}
 
-            <div className="flex justify-between">
-              <span>Delivery / Shipping</span>
-              <span className="text-emerald-700 font-bold">FREE DELIVERY</span>
+            <div className="flex justify-between items-center text-xs">
+              <div className="flex flex-col">
+                <span className="font-bold text-slate-800">Delhivery Shipping</span>
+                <span className="text-[10px] text-slate-400">
+                  {shippingCarrierName} {isCalculatingShipping ? '(calculating...)' : ''}
+                </span>
+              </div>
+              <span className="font-bold text-slate-900">₹{shippingFee.toFixed(2)}</span>
             </div>
 
             <div className="flex justify-between items-baseline pt-3 border-t border-slate-200">

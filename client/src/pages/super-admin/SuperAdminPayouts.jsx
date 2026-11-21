@@ -32,7 +32,7 @@ export const SuperAdminPayouts = () => {
   const [loading, setLoading] = useState(true);
   const [payouts, setPayouts] = useState([]);
   const [summary, setSummary] = useState({});
-  const [statusFilter, setStatusFilter] = useState('PENDING');
+  const [statusFilter, setStatusFilter] = useState('ALL');
   const [search, setSearch] = useState('');
   const [processingId, setProcessingId] = useState(null);
   const [actionModal, setActionModal] = useState(null); // { type: 'APPROVE' | 'REJECT', payout }
@@ -53,7 +53,7 @@ export const SuperAdminPayouts = () => {
       }
     } catch (err) {
       console.error('Failed to load payouts:', err);
-      setErrorMsg('Failed to retrieve vendor payout requests');
+      setErrorMsg(err.response?.data?.message || 'Failed to retrieve vendor payout requests');
     } finally {
       setLoading(false);
     }

@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: baapoo-mart
+    env: node
+    plan: free
+    region: singapore # Closest region to India
+    buildCommand: cd client && npm install && npm run build && cd ../server && npm install
+    startCommand: cd server && npm start
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGO_URI
+        sync: false # Set this in Render dashboard (e.g. MongoDB Atlas URI)
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: RAZORPAY_KEY_ID
+        value: rzp_test_U2R43ynSDNrr3i
+      - key: RAZORPAY_KEY_SECRET
+        value: Tu7ACCng9vuR1Xa5tjIuIzxa
+      - key: RAZORPAY_WEBHOOK_SECRET
+        generateValue: true
+      - key: DEFAULT_COURIER_PROVIDER
+        value: DELHIVERY
+      - key: DELHIVERY_API_KEY
+        value: 9a946879afaa206fc6372d0564cdb66226c134fc
+      - key: DELHIVERY_BASE_URL
+        value: https://track.delhivery.com
+      - key: DELHIVERY_CLIENT_NAME
+        value: BAAPOO SUPER MARKET B2C
+      - key: DELHIVERY_RETURN_NAME
+        value: BAAPOO SUPER MARKET B2C
+      - key: DELHIVERY_WEBHOOK_SECRET
+        generateValue: true
