@@ -38,8 +38,15 @@ const app = express();
 
 app.use(observabilityMiddleware);
 
-// Security Headers
-app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
+// Security Headers - permit Razorpay payment popups (Netbanking / UPI / 3DS)
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    crossOriginOpenerPolicy: false,
+    crossOriginResourcePolicy: false,
+  })
+);
 
 // CORS configuration - allow Render, localhost, custom domains, and reflect origin
 const allowedClientUrls = (env.CLIENT_URL || '')

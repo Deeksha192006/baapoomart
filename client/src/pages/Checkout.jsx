@@ -341,8 +341,9 @@ export const Checkout = () => {
           });
         },
         prefill: {
-          name: address.name,
-          contact: address.phone,
+          name: address.name || user?.name || '',
+          contact: address.phone || user?.phone || '',
+          email: user?.email || '',
         },
         theme: {
           color: '#2563eb',
