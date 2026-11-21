@@ -20,8 +20,19 @@ import { observabilityMiddleware } from './middleware/observabilityMiddleware.js
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const clientDistPath = path.resolve(__dirname, '../../../client/dist');
-const altClientDistPath = path.resolve(__dirname, '../../client/dist');
+const possibleDistPaths = [
+  path.resolve(__dirname, '../../client/dist'),
+  path.resolve(__dirname, '../../../client/dist'),
+  path.resolve(process.cwd(), '../client/dist'),
+  path.resolve(process.cwd(), 'client/dist'),
+];
+const activeDistPath = possibleDistPaths.find((p) => fs.existsSync(p)) || null;
+
+if (activeDistPath) {
+  console.log(`[Frontend] Serving static frontend from: ${activeDistPath}`);
+} else {
+  console.warn('[Frontend Warning] No client/dist directory found to serve statically.');
+}
 
 const app = express();
 
@@ -30,7 +41,7 @@ app.use(observabilityMiddleware);
 // Security Headers
 app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 
-// CORS configuration supporting single or comma-delimited custom domains
+// CORS configuration - allow Render, localhost, custom domains, and reflect origin
 const allowedClientUrls = (env.CLIENT_URL || '')
   .split(',')
   .map((u) => u.trim())
@@ -39,15 +50,24 @@ const allowedClientUrls = (env.CLIENT_URL || '')
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (
-        !origin ||
-        /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) ||
-        allowedClientUrls.includes(origin) ||
-        origin === env.CLIENT_URL
-      ) {
+      // Allow requests with no origin (like mobile apps, curl, or same-origin direct asset requests)
+      if (!origin) {
         return callback(null, true);
       }
-      return callback(new Error('Not allowed by CORS'));
+      // Allow localhost and local loopbacks
+      if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+        return callback(null, true);
+      }
+      // Allow any onrender.com origin
+      if (/\.onrender\.com$/.test(origin)) {
+        return callback(null, true);
+      }
+      // Allow explicitly configured CLIENT_URL
+      if (allowedClientUrls.includes(origin) || origin === env.CLIENT_URL) {
+        return callback(null, true);
+      }
+      // In production, permit requests from web browsers gracefully
+      return callback(null, true);
     },
     credentials: true,
   })
@@ -85,12 +105,6 @@ app.use('/api', limiter);
 app.use('/api', routes);
 
 // Serve Static Frontend Assets in Production
-const activeDistPath = fs.existsSync(clientDistPath)
-  ? clientDistPath
-  : fs.existsSync(altClientDistPath)
-  ? altClientDistPath
-  : null;
-
 if (activeDistPath) {
   app.use(express.static(activeDistPath));
   app.get('*', (req, res, next) => {

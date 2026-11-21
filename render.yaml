@@ -12,6 +12,8 @@ services:
         value: production
       - key: PORT
         value: 10000
+      - key: CLIENT_URL
+        value: https://baapoo-mart.onrender.com
       - key: MONGO_URI
         sync: false # Set this in Render dashboard (e.g. MongoDB Atlas URI)
       - key: JWT_ACCESS_SECRET
