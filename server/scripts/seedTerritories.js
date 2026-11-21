@@ -529,6 +529,18 @@ const TERRITORY_DATA = [
           { name: 'Watrap', code: 'TN-VNR-WAT', pincodes: ['626132'] },
         ],
       },
+      {
+        name: 'Vellore',
+        code: 'TN-VEL',
+        taluks: [
+          { name: 'Vellore', code: 'TN-VEL-VEL', pincodes: ['632001', '632004'] },
+          { name: 'Katpadi', code: 'TN-VEL-KAT', pincodes: ['632007', '632014'] },
+          { name: 'Gudiyatham', code: 'TN-VEL-GUD', pincodes: ['632602'] },
+          { name: 'Anaicut', code: 'TN-VEL-ANA', pincodes: ['632101'] },
+          { name: 'K.V. Kuppam', code: 'TN-VEL-KVK', pincodes: ['632201'] },
+          { name: 'Pernambut', code: 'TN-VEL-PER', pincodes: ['635810'] },
+        ],
+      },
     ],
   },
   {
@@ -687,12 +699,14 @@ const TERRITORY_DATA = [
   },
 ];
 
-export async function seedTerritories() {
+export async function seedTerritories(customUri) {
   console.log('📍 Seeding Indian States, Districts, and Taluks for FairKart Dispatch...\n');
   try {
-    const mongoUri = env.MONGO_URI || 'mongodb://localhost:27017/fairkart';
-    await mongoose.connect(mongoUri);
-    console.log('✅ Connected to MongoDB');
+    const mongoUri = customUri || env.MONGO_URI || 'mongodb://localhost:27017/fairkart';
+    if (mongoose.connection.readyState !== 1) {
+      await mongoose.connect(mongoUri);
+    }
+    console.log('✅ Connected to MongoDB:', mongoose.connection.host, mongoose.connection.name);
 
     let totalStates = 0;
     let totalDistricts = 0;

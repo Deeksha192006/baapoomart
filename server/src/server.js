@@ -10,12 +10,12 @@ const startServer = async () => {
 
     console.log('[Database] Connection established successfully.');
 
-    // Auto-seed territories if empty
+    // Auto-seed territories if incomplete
     try {
       const { Territory } = await import('./models/Territory.js');
-      const count = await Territory.countDocuments();
-      if (count === 0) {
-        console.log('[Territories] Empty territory database detected. Seeding Indian states & dispatch hubs...');
+      const count = await Territory.countDocuments({ type: 'DISTRICT', state: 'Tamil Nadu' });
+      if (count < 30) {
+        console.log('[Territories] Incomplete territory database detected. Seeding Indian states & dispatch hubs...');
         const { seedTerritories } = await import('../scripts/seedTerritories.js');
         await seedTerritories();
       }
