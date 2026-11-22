@@ -275,7 +275,20 @@ export const VendorDashboard = () => {
                 )}
               </div>
               <h1 className="text-2xl md:text-3xl font-black tracking-tight">{vendor?.storeName || 'Merchant Store'}</h1>
-              <p className="text-blue-100 text-xs mt-0.5">Manage products, customer orders & revenue growth</p>
+              <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-blue-100">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/15 backdrop-blur-xs font-semibold text-white border border-white/20">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-300" />
+                  {data?.location?.talukArea?.name ? `${data.location.talukArea.name}, ` : ''}
+                  {data?.location?.district?.name ? `${data.location.district.name}, ` : ''}
+                  {data?.location?.state?.name || 'Tamil Nadu'}
+                  {data?.location?.pincode ? ` • PIN ${data.location.pincode}` : ''}
+                </span>
+                {data?.location?.associatedShopkeeper && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white/10 text-blue-100 border border-white/15">
+                    Hub: {data.location.associatedShopkeeper}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 

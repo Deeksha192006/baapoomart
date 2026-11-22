@@ -248,30 +248,67 @@ export const VendorProfile = () => {
             )}
           </div>
 
-          {/* Location & Contact */}
+          {/* Registered Geographic Territory & Location */}
           <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-7 shadow-xs">
-            <h2 className="text-base font-black text-slate-900 mb-4 flex items-center gap-2 border-b border-slate-100 pb-3">
-              <MapPin className="w-5 h-5 text-blue-600" />
-              <span>Location & Contact</span>
-            </h2>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="col-span-2">
-                <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Address</p>
-                <p className="text-sm font-semibold text-slate-900 mt-0.5">{location?.fullAddress || 'N/A'}</p>
+            <h2 className="text-base font-black text-slate-900 mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-blue-600" />
+                <span>Geographic Territory & Dispatch Location</span>
               </div>
-              <div>
-                <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Territory</p>
-                <p className="text-sm font-semibold text-slate-900 mt-0.5">
-                  {location?.talukArea?.name || ''}, {location?.district?.name || ''}
+              <span className="text-[11px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                Verified Dispatch Hub
+              </span>
+            </h2>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+              <div className="p-3 bg-slate-50 border border-slate-100 rounded-2xl">
+                <p className="text-[10px] text-slate-500 uppercase font-black tracking-wider">State</p>
+                <p className="text-sm font-black text-slate-900 mt-1">
+                  {location?.state?.name || location?.stateName || 'Tamil Nadu'}
                 </p>
               </div>
-              <div>
-                <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Pincode</p>
-                <p className="text-sm font-semibold text-slate-900 mt-0.5">{location?.pincode || 'N/A'}</p>
+
+              <div className="p-3 bg-slate-50 border border-slate-100 rounded-2xl">
+                <p className="text-[10px] text-slate-500 uppercase font-black tracking-wider">District</p>
+                <p className="text-sm font-black text-slate-900 mt-1">
+                  {location?.district?.name || location?.districtName || 'Thoothukudi'}
+                </p>
+              </div>
+
+              <div className="p-3 bg-slate-50 border border-slate-100 rounded-2xl">
+                <p className="text-[10px] text-slate-500 uppercase font-black tracking-wider">Taluk / Town / Area</p>
+                <p className="text-sm font-black text-slate-900 mt-1">
+                  {location?.talukArea?.name || location?.talukName || 'Kovilpatti'}
+                </p>
+              </div>
+
+              <div className="p-3 bg-slate-50 border border-slate-100 rounded-2xl">
+                <p className="text-[10px] text-slate-500 uppercase font-black tracking-wider">Postal PIN Code</p>
+                <p className="text-sm font-black text-blue-700 mt-1">
+                  {location?.pincode || '628502'}
+                </p>
+              </div>
+
+              <div className="p-3 bg-slate-50 border border-slate-100 rounded-2xl sm:col-span-2">
+                <p className="text-[10px] text-slate-500 uppercase font-black tracking-wider">Associated Shopkeeper / Local Hub</p>
+                <p className="text-sm font-bold text-slate-900 mt-1">
+                  {location?.associatedShopkeeper || 'Sekar'}
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-slate-50 border border-slate-100 rounded-2xl sm:col-span-2 md:col-span-3">
+                <p className="text-[10px] text-slate-500 uppercase font-black tracking-wider">Village / Street / Full Warehouse Address</p>
+                <p className="text-sm font-semibold text-slate-800 mt-1 leading-relaxed">
+                  {location?.fullAddress || 'N/A'}
+                </p>
               </div>
             </div>
-            <div className="mt-4 p-3.5 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-800 font-medium">
-              Note: Address and territory adjustments require administrative re-verification. Contact merchant support if you relocate.
+
+            <div className="mt-4 p-3.5 bg-blue-50/70 border border-blue-200/80 rounded-2xl text-xs text-blue-900 font-medium flex items-start gap-2">
+              <MapPin className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+              <span>
+                All Delhivery courier pickups and customer dispatch routes are automatically routed from your registered <strong>{location?.talukArea?.name || 'Taluk'}</strong> hub in <strong>{location?.district?.name || 'District'}</strong>, <strong>{location?.state?.name || 'State'}</strong>.
+              </span>
             </div>
           </div>
         </div>

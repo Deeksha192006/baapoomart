@@ -209,9 +209,11 @@ export const vendorService = {
     const totalOrders = orders.length;
     const totalSales = (typeof vendor.totalSales === 'number' && vendor.totalSales > 0) ? vendor.totalSales : computedSales;
     const totalEarnings = (typeof vendor.balance === 'number' && vendor.balance > 0) ? vendor.balance : computedEarnings;
+    const location = await VendorAddress.findOne({ vendorId: vendor._id }).populate('state district talukArea', 'name');
 
     return {
       vendor,
+      location,
       activeSubscription: activeSubscription || activeLegacySub,
       stats: {
         totalSales,
